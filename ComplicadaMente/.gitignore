@@ -1,0 +1,43 @@
+# Dependencies
+/bin/
+/obj/
+/packages/
+
+# Visual Studio generated files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Rider generated files
+.idea/
+
+# Build results
+[Bb]uild/
+[Dd]ist/
+[Rr]elease/
+[Dd]ebug/
+publish/
+*.dll
+*.exe
+*.pdb
+*.nupkg
+*.snupkg
+
+# Local configuration files
+appsettings.Development.json
+secrets.json
+*.secrets.json
+
+# Log files
+*.log
+logs/
+
+# Test results
+/TestResults
+/test-results
+
+# Other
+*.DS_Store
+Thumbs.db
