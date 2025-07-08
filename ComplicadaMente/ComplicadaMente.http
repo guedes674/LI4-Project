@@ -1,0 +1,6 @@
+@ComplicadaMente_HostAddress = http://localhost:5174
+
+GET {{ComplicadaMente_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
