@@ -1,0 +1,80 @@
+@page
+@model ComplicadaMente.Pages.LoginModel
+@{
+    ViewData["Title"] = "Login";
+}
+
+<style>
+  body {
+    background-color: #cce7ff;
+    height: 100vh;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .login-form {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  label {
+    margin-top: 10px;
+    font-weight: bold;
+  }
+
+  input {
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+
+  button {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #007acc;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  button:hover {
+    background-color: #005fa3;
+  }
+
+  .text-danger {
+    color: red;
+    font-size: 0.875em;
+    margin-top: 5px;
+  }
+</style>
+
+<form method="post" class="login-form">
+  <h2 style="text-align: center;">Login</h2>
+
+  <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+  <label asp-for="Email"></label>
+  <input asp-for="Email" type="email" />
+  <span asp-validation-for="Email" class="text-danger"></span>
+
+  <label asp-for="Password"></label>
+  <input asp-for="Password" type="password" />
+  <span asp-validation-for="Password" class="text-danger"></span>
+
+  <button type="submit">Entrar</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
