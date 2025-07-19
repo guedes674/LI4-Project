@@ -30,6 +30,10 @@ appsettings.Development.json
 secrets.json
 *.secrets.json
 
+# Database files
+*.db
+*.db-*
+
 # Log files
 *.log
 logs/
