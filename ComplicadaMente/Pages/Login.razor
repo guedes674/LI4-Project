@@ -1,0 +1,159 @@
+@page "/login"
+@using Microsoft.EntityFrameworkCore
+@inject ComplicadaMenteContext Context
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Login</PageTitle>
+
+<style>
+  body {
+    background-color: #cce7ff;
+    height: 100vh;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .login-form {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  label {
+    margin-top: 10px;
+    font-weight: bold;
+  }
+
+  input {
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+
+  button {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #007acc;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  button:hover {
+    background-color: #005fa3;
+  }
+
+  .text-danger {
+    color: red;
+    font-size: 0.875em;
+    margin-top: 5px;
+  }
+
+  .loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+</style>
+
+<div class="login-form @(isLoading ? "loading" : "")">
+    <h2 style="text-align: center;">Login</h2>
+
+    @if (!string.IsNullOrEmpty(ErroMensagem))
+    {
+        <div class="text-danger">@ErroMensagem</div>
+    }
+
+    <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin">
+        <DataAnnotationsValidator />
+        
+        <label>Email</label>
+        <InputText @bind-Value="loginModel.Email" type="email" disabled="@isLoading" />
+        <ValidationMessage For="@(() => loginModel.Email)" />
+
+        <label>Password</label>
+        <InputText @bind-Value="loginModel.Password" type="password" disabled="@isLoading" />
+        <ValidationMessage For="@(() => loginModel.Password)" />
+
+        <button type="submit" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span>Entrando...</span>
+            }
+            else
+            {
+                <span>Entrar</span>
+            }
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string? ErroMensagem;
+    private bool isLoading = false;
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Email é obrigatório")]
+        [EmailAddress(ErrorMessage = "Email inválido")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password é obrigatória")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    private async Task HandleLogin()
+    {
+        ErroMensagem = null;
+        isLoading = true;
+
+        try
+        {
+            var funcionario = await Context.Funcionarios
+                .FirstOrDefaultAsync(f => f.Email == loginModel.Email);
+
+            if (funcionario == null)
+            {
+                ErroMensagem = "Email não encontrado.";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(funcionario.Password))
+            {
+                ErroMensagem = "Funcionário sem password configurada.";
+                return;
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(loginModel.Password, funcionario.Password))
+            {
+                ErroMensagem = "Password incorreta.";
+                return;
+            }
+
+            await JSRuntime.InvokeVoidAsync("alert", $"Login realizado com sucesso! Bem-vindo {funcionario.Nome}");
+            
+            Navigation.NavigateTo("/", true);
+        }
+        catch (Exception ex)
+        {
+            ErroMensagem = $"Erro durante o login: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

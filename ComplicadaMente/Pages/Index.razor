@@ -1,0 +1,82 @@
+@page "/"
+@page "/Index"
+
+<PageTitle>Home - ComplicadaMente</PageTitle>
+
+<style>
+  body {
+    background-color: #cce7ff;
+    height: 100vh;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .home-container {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    width: 400px;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  h1 {
+    color: #007acc;
+    margin-bottom: 1rem;
+    font-size: 2rem;
+  }
+
+  p {
+    color: #333;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+
+  .btn-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .btn {
+    padding: 10px;
+    background-color: #007acc;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s;
+  }
+
+  .btn:hover {
+    background-color: #005fa3;
+    color: white;
+    text-decoration: none;
+  }
+
+  .btn-secondary {
+    background-color: #6c757d;
+  }
+
+  .btn-secondary:hover {
+    background-color: #545b62;
+  }
+</style>
+
+<div class="home-container">
+    <h1>ComplicadaMente</h1>
+    <p>Bem-vindo ao sistema de gestão da ComplicadaMente. Faça login para acessar o sistema ou explore nossas funcionalidades.</p>
+    
+    <div class="btn-container">
+        <a href="/Login" class="btn">Fazer Login</a>
+        <a href="/Shop" class="btn btn-secondary">Ver Loja</a>
+    </div>
+</div>
