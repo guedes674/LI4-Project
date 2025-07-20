@@ -1,0 +1,71 @@
+@using Microsoft.EntityFrameworkCore
+@inject ComplicadaMenteContext Context
+@inject IJSRuntime JSRuntime
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-primary" href="/">ComplicadaMente</a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                @if (IsAdmin) @* Admin View *@
+                {
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/products">Produtos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/orders">Encomendas</a>
+                    </li>
+                }
+                @* Cliente View *@
+                else if (!string.IsNullOrEmpty(UserName))
+                {
+                    <li class="nav-item">
+                        <a class="nav-link" href="/shop">Loja</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/popular">Mais Vendidos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/my-orders">Minhas Encomendas</a>
+                    </li>
+                }
+            </ul>
+            
+            @if (!string.IsNullOrEmpty(UserName))
+            {
+                <div class="navbar-nav">
+                    <span class="navbar-text me-3">Olá, @UserName!</span>
+                    <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Sair</button>
+                </div>
+            }
+            else
+            {
+                <div class="navbar-nav">
+                    <a class="nav-link" href="/login">Login</a>
+                </div>
+            }
+        </div>
+    </div>
+</nav>
+
+@code {
+    [Parameter] public bool IsAdmin { get; set; } = false;
+    [Parameter] public string? UserName { get; set; }
+    [Parameter] public EventCallback OnLogout { get; set; }
+
+    private async Task Logout()
+    {
+        if (OnLogout.HasDelegate)
+        {
+            await OnLogout.InvokeAsync();
+        }
+    }
+}

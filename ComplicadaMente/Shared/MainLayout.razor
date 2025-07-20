@@ -1,8 +1,55 @@
 @using Microsoft.AspNetCore.Components.Web
+@inject UserStateService UserState
+@inject NavigationManager Navigation
 @inherits LayoutComponentBase
+@implements IDisposable
 
 <div class="page">
-    <main>
+    <Navigation IsAdmin="@UserState.IsAdmin" 
+               UserName="@UserState.UserName" 
+               OnLogout="HandleLogout" />
+    
+    <main class="main-content">
         @Body
     </main>
 </div>
+
+<style>
+    .page {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .main-content {
+        flex: 1;
+        padding-top: 20px;
+    }
+
+    body {
+        background-color: #f8f9fa;
+    }
+</style>
+
+@code {
+    protected override void OnInitialized()
+    {
+        UserState.OnChange += OnStateChanged;
+    }
+
+    private async void OnStateChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleLogout()
+    {
+        UserState.ClearUser();
+        Navigation.NavigateTo("/", true);
+    }
+
+    public void Dispose()
+    {
+        UserState.OnChange -= OnStateChanged;
+    }
+}

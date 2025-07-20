@@ -1,11 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using ComplicadaMente.Data;
+using ComplicadaMente.Services;
 using ComplicadaMente.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ComplicadaMenteContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddSingleton<UserStateService>();
 
 builder.Services.AddSession(options =>
 {
@@ -15,31 +18,16 @@ builder.Services.AddSession(options =>
 });
 
 builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor(options =>
-{
-    options.DetailedErrors = builder.Environment.IsDevelopment();
-});
+builder.Services.AddServerSideBlazor();
 
 var app = builder.Build();
 
-// adding a user test only to test login
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ComplicadaMenteContext>();
     context.Database.EnsureCreated();
-
-    if (!context.Funcionarios.Any())
-    {
-        context.Funcionarios.Add(new Funcionario
-        {
-            Nome = "Admin Test",
-            Cargo = "Administrador",
-            Email = "admin@test.com",
-            Password = BCrypt.Net.BCrypt.HashPassword("123456"),
-            Salario = 1500.00m
-        });
-        context.SaveChanges();
-    }
+    
+    await SeedDefaultUsers(context);
 }
 
 if (!app.Environment.IsDevelopment())
@@ -51,7 +39,6 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-
 app.UseSession();
 
 app.MapRazorPages();
@@ -59,3 +46,43 @@ app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
 app.Run();
+
+// only for development purposes
+// this method seeds the database with test users if none exist
+static async Task SeedDefaultUsers(ComplicadaMenteContext context)
+{
+    // check if there are already users in the database
+    if (await context.Utilizadores.AnyAsync() || await context.Funcionarios.AnyAsync())
+    {
+        return;
+    }
+
+    // create test users if none exist (client)
+    var defaultUtilizador = new Utilizador
+    {
+        Nome = "Cliente Teste",
+        Email = "cliente@teste.com",
+        Telefone = "123456789",
+        Morada = "Rua Teste, 123, 4000-000 Porto",
+        Password = BCrypt.Net.BCrypt.HashPassword("123456")
+    };
+
+    // create test users if none exist (admin)
+    var defaultFuncionario = new Funcionario
+    {
+        Nome = "Admin Sistema",
+        Cargo = "Administrador",
+        Email = "admin@sistema.com",
+        Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
+        Salario = 1500.00m
+    };
+
+    context.Utilizadores.Add(defaultUtilizador);
+    context.Funcionarios.Add(defaultFuncionario);
+
+    await context.SaveChangesAsync();
+
+    Console.WriteLine("Default users created:");
+    Console.WriteLine($"Cliente: {defaultUtilizador.Email} | Password: 123456");
+    Console.WriteLine($"Admin: {defaultFuncionario.Email} | Password: admin123");
+}

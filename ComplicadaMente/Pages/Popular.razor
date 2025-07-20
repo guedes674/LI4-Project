@@ -1,0 +1,212 @@
+@page "/popular"
+@using Microsoft.EntityFrameworkCore
+@inject ComplicadaMenteContext Context
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Mais Vendidos - ComplicadaMente</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">Puzzles Mais Vendidos</h1>
+            <p class="text-center text-muted mb-5">Descubra os puzzles favoritos dos nossos clientes</p>
+        </div>
+    </div>
+
+    <div class="row">
+        @if (popularPuzzles?.Any() == true)
+        {
+            @foreach (var item in popularPuzzles.Select((puzzle, index) => new { puzzle, index }))
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm popular-card @(item.index < 3 ? "top-seller" : "")">
+                        @if (item.index < 3)
+                        {
+                            <div class="badge-container">
+                                <span class="badge bg-gold position-absolute top-0 start-0 m-2">
+                                    <i class="fas fa-crown"></i> #@(item.index + 1)
+                                </span>
+                            </div>
+                        }
+                        
+                        <div class="card-img-container">
+                            @if (item.puzzle.Imagem != null && item.puzzle.Imagem.Length > 0)
+                            {
+                                <img src="data:image/jpeg;base64,@Convert.ToBase64String(item.puzzle.Imagem)" 
+                                     class="card-img-top" alt="@item.puzzle.Nome" />
+                            }
+                            else
+                            {
+                                <div class="card-img-placeholder">
+                                    <i class="fas fa-puzzle-piece fa-3x text-muted"></i>
+                                </div>
+                            }
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@item.puzzle.Nome</h5>
+                            <p class="card-text text-muted">@item.puzzle.Tipo</p>
+                            <p class="card-text flex-grow-1">@item.puzzle.Descricao</p>
+                            
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="h5 mb-0 text-primary">€@item.puzzle.Preco.ToString("F2")</span>
+                                    <span class="text-success">
+                                        <i class="fas fa-shopping-bag"></i> 
+                                        @GetSalesCount(item.puzzle.Id) vendidos
+                                    </span>
+                                </div>
+                                <button class="btn btn-primary w-100" @onclick="(() => AddToCart(item.puzzle.Id))">
+                                    <i class="fas fa-shopping-cart"></i> Adicionar ao Carrinho
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    @if (isLoading)
+                    {
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2">Carregando puzzles mais vendidos...</p>
+                    }
+                    else
+                    {
+                        <p>Ainda não há dados de vendas disponíveis.</p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .popular-card {
+        position: relative;
+        transition: transform 0.3s ease;
+    }
+    
+    .popular-card:hover {
+        transform: translateY(-8px);
+    }
+    
+    .top-seller {
+        border: 2px solid gold;
+        box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3) !important;
+    }
+    
+    .badge-container {
+        position: relative;
+        z-index: 10;
+    }
+    
+    .bg-gold {
+        background-color: gold !important;
+        color: black !important;
+        font-weight: bold;
+    }
+    
+    .card-img-container {
+        height: 220px;
+        overflow: hidden;
+    }
+    
+    .card-img-top {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    
+    .popular-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+    
+    .card-img-placeholder {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+    }
+</style>
+
+@code {
+    private List<QuebraCabeca>? popularPuzzles;
+    private Dictionary<int, int> salesData = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPopularPuzzles();
+    }
+
+    private async Task LoadPopularPuzzles()
+    {
+        try
+        {
+            isLoading = true;
+            
+            // get sales data grouped by quebra-cabeça id
+            var salesQuery = await Context.QuebraCabecaEncomendas
+                .GroupBy(qe => qe.QuebraCabecaId)
+                .Select(g => new { PuzzleId = g.Key, TotalSold = g.Sum(x => x.Quantidade) })
+                .OrderByDescending(x => x.TotalSold)
+                .ToListAsync();
+
+            // convert to dictionary for easy access
+            salesData = salesQuery.ToDictionary(x => x.PuzzleId, x => x.TotalSold);
+
+            // get quebra-cabeças based on sales data
+            var puzzleIds = salesQuery.Select(s => s.PuzzleId).ToList();
+            
+            // if there are no sales, get random puzzles
+            if (puzzleIds.Any())
+            {
+                popularPuzzles = await Context.QuebraCabecas
+                    .Where(p => puzzleIds.Contains(p.Id))
+                    .ToListAsync();
+                    
+                // order by sales count
+                popularPuzzles = popularPuzzles
+                    .OrderByDescending(p => salesData.ContainsKey(p.Id) ? salesData[p.Id] : 0)
+                    .Take(12)
+                    .ToList();
+            }
+            else
+            {
+                // if no sales, get random puzzles
+                popularPuzzles = await Context.QuebraCabecas
+                    .Take(8)
+                    .ToListAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading popular puzzles: {ex.Message}");
+            popularPuzzles = new List<QuebraCabeca>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private int GetSalesCount(int puzzleId)
+    {
+        return salesData.ContainsKey(puzzleId) ? salesData[puzzleId] : 0;
+    }
+
+    private async Task AddToCart(int puzzleId)
+    {
+        // will implement cart logic here
+        await JSRuntime.InvokeVoidAsync("alert", "Puzzle adicionado ao carrinho!");
+    }
+}

@@ -3,6 +3,7 @@
 @inject ComplicadaMenteContext Context
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject UserStateService UserState
 @using System.ComponentModel.DataAnnotations
 
 <PageTitle>Login</PageTitle>
@@ -121,30 +122,73 @@
 
         try
         {
+            // check if it's a funcionario
             var funcionario = await Context.Funcionarios
                 .FirstOrDefaultAsync(f => f.Email == loginModel.Email);
 
-            if (funcionario == null)
+            // if funcionario is found, verify password
+            if (funcionario != null)
             {
-                ErroMensagem = "Email não encontrado.";
+                if (string.IsNullOrEmpty(funcionario.Password))
+                {
+                    ErroMensagem = "Funcionário sem password configurada.";
+                    return;
+                }
+
+                // verify password
+                if (!BCrypt.Net.BCrypt.Verify(loginModel.Password, funcionario.Password))
+                {
+                    ErroMensagem = "Password incorreta.";
+                    return;
+                }
+
+                // store funcionario information
+                UserState.SetUser(
+                    funcionario.Id.ToString(),
+                    funcionario.Nome ?? "",
+                    "admin",
+                    funcionario.Email ?? ""
+                );
+
+                // redirect to admin dashboard
+                Navigation.NavigateTo("/admin/dashboard", true);
                 return;
             }
 
-            if (string.IsNullOrEmpty(funcionario.Password))
+            // check if it's a Utilizador
+            var utilizador = await Context.Utilizadores
+                .FirstOrDefaultAsync(u => u.Email == loginModel.Email);
+
+            // if utilizador is found, verify password
+            if (utilizador != null)
             {
-                ErroMensagem = "Funcionário sem password configurada.";
+                if (string.IsNullOrEmpty(utilizador.Password))
+                {
+                    ErroMensagem = "Utilizador sem password configurada.";
+                    return;
+                }
+
+                // verify password
+                if (!BCrypt.Net.BCrypt.Verify(loginModel.Password, utilizador.Password))
+                {
+                    ErroMensagem = "Password incorreta.";
+                    return;
+                }
+
+                // store utilizador information
+                UserState.SetUser(
+                    utilizador.Id.ToString(),
+                    utilizador.Nome ?? "",
+                    "client",
+                    utilizador.Email ?? ""
+                );
+
+                // redirect to shop page
+                Navigation.NavigateTo("/shop", true);
                 return;
             }
 
-            if (!BCrypt.Net.BCrypt.Verify(loginModel.Password, funcionario.Password))
-            {
-                ErroMensagem = "Password incorreta.";
-                return;
-            }
-
-            await JSRuntime.InvokeVoidAsync("alert", $"Login realizado com sucesso! Bem-vindo {funcionario.Nome}");
-            
-            Navigation.NavigateTo("/", true);
+            ErroMensagem = "Email não encontrado.";
         }
         catch (Exception ex)
         {

@@ -27,7 +27,7 @@ CREATE TABLE Encomenda (
     ID_Utilizador INT NOT NULL,
     ID_Funcionario INT NOT NULL,
     Data_Encomenda DATE NOT NULL,
-    FOREIGN KEY (ID_Utilizador) REFERENCES Utilizador(ID)
+    FOREIGN KEY (ID_Utilizador) REFERENCES Utilizador(ID),
     FOREIGN KEY (ID_Funcionario) REFERENCES Funcionario(ID)
 );
 

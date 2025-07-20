@@ -1,0 +1,244 @@
+@page "/shop"
+@using Microsoft.EntityFrameworkCore
+@inject ComplicadaMenteContext Context
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Loja - ComplicadaMente</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">Loja ComplicadaMente</h1>
+            
+            <!-- Search Bar -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Pesquisar puzzles..." 
+                               @bind="searchTerm" @onkeypress="OnKeyPress">
+                        <button class="btn btn-primary" type="button" @onclick="SearchPuzzles">
+                            <i class="fas fa-search"></i> Pesquisar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Options -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <select class="form-select" @bind="selectedType">
+                        <option value="">Todos os tipos</option>
+                        @foreach (var type in puzzleTypes)
+                        {
+                            <option value="@type">@type</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" @bind="priceRange">
+                        <option value="">Todos os preços</option>
+                        <option value="0-10">€0 - €10</option>
+                        <option value="10-25">€10 - €25</option>
+                        <option value="25-50">€25 - €50</option>
+                        <option value="50+">€50+</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-secondary" @onclick="ClearFilters">Limpar Filtros</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Puzzles Grid -->
+    <div class="row">
+        @if (filteredPuzzles?.Any() == true)
+        {
+            @foreach (var puzzle in filteredPuzzles)
+            {
+                <div class="col-md-4 col-lg-3 mb-4">
+                    <div class="card h-100 shadow-sm puzzle-card">
+                        <div class="card-img-container">
+                            @if (puzzle.Imagem != null && puzzle.Imagem.Length > 0)
+                            {
+                                <img src="data:image/jpeg;base64,@Convert.ToBase64String(puzzle.Imagem)" 
+                                     class="card-img-top" alt="@puzzle.Nome" />
+                            }
+                            else
+                            {
+                                <div class="card-img-placeholder">
+                                    <i class="fas fa-puzzle-piece fa-3x text-muted"></i>
+                                </div>
+                            }
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@puzzle.Nome</h5>
+                            <p class="card-text text-muted">@puzzle.Tipo</p>
+                            <p class="card-text flex-grow-1">@puzzle.Descricao</p>
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="h5 mb-0 text-primary">€@puzzle.Preco.ToString("F2")</span>
+                                    <button class="btn btn-primary btn-sm" @onclick="(() => AddToCart(puzzle.Id))">
+                                        <i class="fas fa-shopping-cart"></i> Adicionar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    @if (isLoading)
+                    {
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2">Carregando puzzles...</p>
+                    }
+                    else
+                    {
+                        <p>Nenhum puzzle encontrado.</p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .puzzle-card {
+        transition: transform 0.2s;
+    }
+    
+    .puzzle-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .card-img-container {
+        height: 200px;
+        overflow: hidden;
+    }
+    
+    .card-img-top {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .card-img-placeholder {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+    }
+</style>
+
+@code {
+    private List<QuebraCabeca>? allPuzzles;
+    private List<QuebraCabeca>? filteredPuzzles;
+    private List<string> puzzleTypes = new();
+    private string searchTerm = "";
+    private string selectedType = "";
+    private string priceRange = "";
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPuzzles();
+    }
+
+    private async Task LoadPuzzles()
+    {
+        try
+        {
+            isLoading = true;
+            allPuzzles = await Context.QuebraCabecas.ToListAsync();
+            puzzleTypes = allPuzzles.Select(p => p.Tipo ?? "").Distinct().Where(t => !string.IsNullOrEmpty(t)).ToList();
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading puzzles: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        if (allPuzzles == null) return;
+
+        filteredPuzzles = new List<QuebraCabeca>(allPuzzles);
+
+        // search term filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredPuzzles = filteredPuzzles.Where(p => 
+                (p.Nome ?? "").Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                (p.Descricao ?? "").Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                (p.Tipo ?? "").Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        // type filter
+        if (!string.IsNullOrEmpty(selectedType))
+        {
+            filteredPuzzles = filteredPuzzles.Where(p => p.Tipo == selectedType).ToList();
+        }
+
+        // price range filter
+        if (!string.IsNullOrEmpty(priceRange))
+        {
+            filteredPuzzles = priceRange switch
+            {
+                "0-10" => filteredPuzzles.Where(p => p.Preco <= 10).ToList(),
+                "10-25" => filteredPuzzles.Where(p => p.Preco > 10 && p.Preco <= 25).ToList(),
+                "25-50" => filteredPuzzles.Where(p => p.Preco > 25 && p.Preco <= 50).ToList(),
+                "50+" => filteredPuzzles.Where(p => p.Preco > 50).ToList(),
+                _ => filteredPuzzles.ToList()
+            };
+        }
+
+        // ensure filteredPuzzles is a list
+        if (filteredPuzzles is IQueryable<QuebraCabeca> queryable)
+        {
+            filteredPuzzles = queryable.ToList();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SearchPuzzles()
+    {
+        ApplyFilters();
+    }
+
+    private async Task OnKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchPuzzles();
+        }
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = "";
+        selectedType = "";
+        priceRange = "";
+        ApplyFilters();
+    }
+
+    private async Task AddToCart(int puzzleId)
+    {
+        // will implement cart logic here
+        await JSRuntime.InvokeVoidAsync("alert", "Puzzle adicionado ao carrinho!");
+    }
+}
