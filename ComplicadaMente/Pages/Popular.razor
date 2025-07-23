@@ -1,4 +1,5 @@
 @page "/popular"
+@layout MainLayout
 @using Microsoft.EntityFrameworkCore
 @inject ComplicadaMenteContext Context
 @inject IJSRuntime JSRuntime
@@ -207,6 +208,5 @@
     private async Task AddToCart(int puzzleId)
     {
         // will implement cart logic here
-        await JSRuntime.InvokeVoidAsync("alert", "Puzzle adicionado ao carrinho!");
     }
 }

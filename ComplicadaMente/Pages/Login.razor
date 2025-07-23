@@ -1,4 +1,6 @@
+@page "/"
 @page "/login"
+@layout MainLayout
 @using Microsoft.EntityFrameworkCore
 @inject ComplicadaMenteContext Context
 @inject IJSRuntime JSRuntime
@@ -9,36 +11,48 @@
 <PageTitle>Login</PageTitle>
 
 <style>
-  body {
-    background-color: #cce7ff;
-    height: 100vh;
-    margin: 0;
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
   .login-form {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    width: 300px;
+    background-color: #fff;
+    padding: 2.5rem 2rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0, 122, 204, 0.10), 0 1.5px 6px rgba(0,0,0,0.07);
+    width: 340px;
     display: flex;
     flex-direction: column;
+    gap: 12px;
+    margin-top: 32px;
+    margin-bottom: 32px;
+  }
+
+  h2 {
+    color: #007acc;
+    font-weight: bold;
+    margin-bottom: 1.2rem;
+    letter-spacing: 1px;
   }
 
   label {
+    display: block;
     margin-top: 10px;
-    font-weight: bold;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 2px;
   }
 
   input {
-    padding: 8px;
+    padding: 10px;
     margin-top: 5px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
+    border-radius: 6px;
+    border: 1px solid #bcdffb;
+    background: #f8f9fa;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+
+  input:focus {
+    border-color: #007acc;
+    outline: none;
+    background: #fff;
   }
 
   button {
@@ -47,9 +61,12 @@
     background-color: #007acc;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
     font-weight: bold;
+    font-size: 1rem;
+    box-shadow: 0 2px 8px rgba(0,122,204,0.08);
+    transition: background-color 0.2s;
   }
 
   button:hover {
@@ -57,9 +74,10 @@
   }
 
   .text-danger {
-    color: red;
-    font-size: 0.875em;
+    color: #d9534f;
+    font-size: 0.95em;
     margin-top: 5px;
+    text-align: center;
   }
 
   .loading {
@@ -68,36 +86,38 @@
   }
 </style>
 
-<div class="login-form @(isLoading ? "loading" : "")">
-    <h2 style="text-align: center;">Login</h2>
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="login-form @(isLoading ? "loading" : "")">
+        <h2>Login</h2>
 
-    @if (!string.IsNullOrEmpty(ErroMensagem))
-    {
-        <div class="text-danger">@ErroMensagem</div>
-    }
+        @if (!string.IsNullOrEmpty(ErroMensagem))
+        {
+            <div class="text-danger">@ErroMensagem</div>
+        }
 
-    <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin">
-        <DataAnnotationsValidator />
-        
-        <label>Email</label>
-        <InputText @bind-Value="loginModel.Email" type="email" disabled="@isLoading" />
-        <ValidationMessage For="@(() => loginModel.Email)" />
+        <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin">
+            <DataAnnotationsValidator />
+            
+            <label>Email</label>
+            <InputText @bind-Value="loginModel.Email" type="email" disabled="@isLoading" />
+            <ValidationMessage For="@(() => loginModel.Email)" />
 
-        <label>Password</label>
-        <InputText @bind-Value="loginModel.Password" type="password" disabled="@isLoading" />
-        <ValidationMessage For="@(() => loginModel.Password)" />
+            <label>Password</label>
+            <InputText @bind-Value="loginModel.Password" type="password" disabled="@isLoading" />
+            <ValidationMessage For="@(() => loginModel.Password)" />
 
-        <button type="submit" disabled="@isLoading">
-            @if (isLoading)
-            {
-                <span>Entrando...</span>
-            }
-            else
-            {
-                <span>Entrar</span>
-            }
-        </button>
-    </EditForm>
+            <button type="submit" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span>Entrando...</span>
+                }
+                else
+                {
+                    <span>Entrar</span>
+                }
+            </button>
+        </EditForm>
+    </div>
 </div>
 
 @code {
@@ -151,7 +171,7 @@
                 );
 
                 // redirect to admin dashboard
-                Navigation.NavigateTo("/admin/dashboard", true);
+                Navigation.NavigateTo("/admin/products", true);
                 return;
             }
 

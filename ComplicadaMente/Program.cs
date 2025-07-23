@@ -77,12 +77,24 @@ static async Task SeedDefaultUsers(ComplicadaMenteContext context)
         Salario = 1500.00m
     };
 
+    // create a test QuebraCabeca
+    var defaultQuebraCabeca = new QuebraCabeca
+    {
+        Nome = "Puzzle Teste",
+        Tipo = "Clássico",
+        Preco = 19.99m,
+        Descricao = "Quebra-cabeça de teste para desenvolvimento.",
+        Imagem = new byte[] { 0xFF, 0xD8, 0xFF }
+    };
+
     context.Utilizadores.Add(defaultUtilizador);
     context.Funcionarios.Add(defaultFuncionario);
+    context.QuebraCabecas.Add(defaultQuebraCabeca);
 
     await context.SaveChangesAsync();
 
-    Console.WriteLine("Default users created:");
+    Console.WriteLine("Default users and QuebraCabeca created:");
     Console.WriteLine($"Cliente: {defaultUtilizador.Email} | Password: 123456");
     Console.WriteLine($"Admin: {defaultFuncionario.Email} | Password: admin123");
+    Console.WriteLine($"QuebraCabeca: {defaultQuebraCabeca.Nome}");
 }
