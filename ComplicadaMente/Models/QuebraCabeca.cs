@@ -116,6 +116,9 @@ namespace ComplicadaMente.Models
         [Required]
         public byte[]? Imagem { get; set; }
 
+        [Required]
+        public int Quantidade { get; set; }
+
         public ICollection<QuebraCabecaEncomenda>? QuebraCabecaEncomendas { get; set; }
     }
 }

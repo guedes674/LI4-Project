@@ -158,19 +158,27 @@
         DbContext.Encomendas.Add(encomenda);
         await DbContext.SaveChangesAsync();
 
+        // iterate through the cart items and create QuebraCabecaEncomenda or PecaEncomenda to make
+        // the connection between the order and the products
         foreach (var item in CartService.Items)
         {   
             // if the item is a QuebraCabeca
             if (item.ProductType == "QuebraCabeca")
             {
                 var quebraCabeca = DbContext.QuebraCabecas.FirstOrDefault(q => q.Id == item.ProductId);
+
+                // if the quebra-cabeça exists
                 if (quebraCabeca != null)
                 {
+                    // create a new QuebraCabecaEncomenda
                     var qce = new QuebraCabecaEncomenda
                     {
                         QuebraCabecaId = quebraCabeca.Id,
                         EncomendaId = encomenda.Id,
-                        Quantidade = item.Quantity
+                        Quantidade = item.Quantity,
+                        Nome = quebraCabeca.Nome,
+                        Tipo = quebraCabeca.Tipo,
+                        Preco = quebraCabeca.Preco,
                     };
                     DbContext.QuebraCabecaEncomendas.Add(qce);
                 }
@@ -179,13 +187,19 @@
             else if (item.ProductType == "Peca")
             {
                 var peca = DbContext.Pecas.FirstOrDefault(p => p.Id == item.ProductId);
+
+                // if the peca exists
                 if (peca != null)
                 {
+                    // create a new PecaEncomenda
                     var pecaEncomenda = new PecaEncomenda
                     {
                         PecaId = peca.Id,
                         EncomendaId = encomenda.Id,
-                        Quantidade = item.Quantity
+                        Quantidade = item.Quantity,
+                        Nome = peca.Nome,
+                        Tipo = peca.Tipo,
+                        Preco = peca.Preco
                     };
                     DbContext.PecaEncomendas.Add(pecaEncomenda);
                 }

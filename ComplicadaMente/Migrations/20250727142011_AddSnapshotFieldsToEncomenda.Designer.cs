@@ -3,6 +3,7 @@ using System;
 using ComplicadaMente.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ComplicadaMente.Migrations
 {
     [DbContext(typeof(ComplicadaMenteContext))]
-    partial class ComplicadaMenteContextModelSnapshot : ModelSnapshot
+    [Migration("20250727142011_AddSnapshotFieldsToEncomenda")]
+    partial class AddSnapshotFieldsToEncomenda
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.7");
@@ -81,38 +84,6 @@ namespace ComplicadaMente.Migrations
                     b.ToTable("Funcionario");
                 });
 
-            modelBuilder.Entity("ComplicadaMente.Models.ManualStep", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Descricao")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<byte[]>("Imagem")
-                        .IsRequired()
-                        .HasColumnType("BLOB");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("QuebraCabecaId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("StepNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("QuebraCabecaId");
-
-                    b.ToTable("ManualSteps");
-                });
-
             modelBuilder.Entity("ComplicadaMente.Models.Peca", b =>
                 {
                     b.Property<int>("Id")
@@ -135,9 +106,6 @@ namespace ComplicadaMente.Migrations
 
                     b.Property<decimal>("Preco")
                         .HasColumnType("decimal(9, 2)");
-
-                    b.Property<int>("Quantidade")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("QuebraCabecaId")
                         .HasColumnType("INTEGER")
@@ -206,9 +174,6 @@ namespace ComplicadaMente.Migrations
 
                     b.Property<decimal>("Preco")
                         .HasColumnType("decimal(9, 2)");
-
-                    b.Property<int>("Quantidade")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Tipo")
                         .IsRequired()
@@ -294,17 +259,6 @@ namespace ComplicadaMente.Migrations
                         .IsRequired();
 
                     b.Navigation("Utilizador");
-                });
-
-            modelBuilder.Entity("ComplicadaMente.Models.ManualStep", b =>
-                {
-                    b.HasOne("ComplicadaMente.Models.QuebraCabeca", "QuebraCabeca")
-                        .WithMany()
-                        .HasForeignKey("QuebraCabecaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("QuebraCabeca");
                 });
 
             modelBuilder.Entity("ComplicadaMente.Models.Peca", b =>

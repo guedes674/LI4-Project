@@ -15,6 +15,7 @@ namespace ComplicadaMente.Data
         public DbSet<QuebraCabeca> QuebraCabecas { get; set; }
         public DbSet<QuebraCabecaEncomenda> QuebraCabecaEncomendas { get; set; }
         public DbSet<PecaEncomenda> PecaEncomendas { get; set; }
+        public DbSet<ManualStep> ManualSteps { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

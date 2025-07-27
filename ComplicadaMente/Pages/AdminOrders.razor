@@ -32,10 +32,29 @@
                         <td>@enc.Estado</td>
                         <td>€@enc.PrecoTotal.ToString("F2")</td>
                         <td>
-                            <button class="btn btn-sm btn-info" @onclick="() => ShowDetails(enc.Id)">Detalhes</button>
-                            @if (enc.Estado != "Cancelada")
+                            @if (enc.Estado == "Enviada")
                             {
+                                <div class="alert alert-success mb-0 py-1 px-2 text-center fw-bold" style="font-size:0.95em;">
+                                    Encomenda enviada!
+                                </div>
+                            }
+                            else if (enc.Estado == "Cancelada")
+                            {
+                                <div class="alert alert-danger mb-0 py-1 px-2 text-center fw-bold" style="font-size:0.95em;">
+                                    Encomenda cancelada!
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-info" @onclick="() => ShowDetails(enc.Id)">Detalhes</button>
                                 <button class="btn btn-sm btn-danger ms-2" @onclick="() => CancelOrder(enc.Id)">Cancelar</button>
+                                <select class="form-select form-select-sm d-inline-block w-auto ms-2"
+                                        value="@enc.Estado"
+                                        @onchange="async e => await UpdateOrderState(enc.Id, e.Value?.ToString())">
+                                    <option value="Pendente">Pendente</option>
+                                    <option value="Em Montagem">Em Montagem</option>
+                                    <option value="Enviada">Enviada</option>
+                                </select>
                             }
                         </td>
                     </tr>
@@ -44,8 +63,16 @@
         </tbody>
     </table>
 
+    <!-- Order Details Modal -->
     @if (selectedEncomenda != null)
     {
+        @if (selectedEncomenda.Estado == "Enviada")
+        {
+            <div class="alert alert-success text-center fw-bold">
+                Esta encomenda foi <span class="text-success">enviada</span>!
+            </div>
+        }
+
         <div class="modal show d-block" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -63,14 +90,14 @@
                         <ul>
                             @foreach (var qce in selectedEncomenda.QuebraCabecaEncomendas ?? new List<QuebraCabecaEncomenda>())
                             {
-                                <li>@qce.QuebraCabeca?.Id - Quantidade: @qce.Quantidade</li>
+                                <li>@qce.Nome - Tipo: @qce.Tipo - Preço: €@qce.Preco.ToString("F2") - Quantidade: @qce.Quantidade</li>
                             }
                         </ul>
                         <h6>Peças</h6>
                         <ul>
                             @foreach (var pe in selectedEncomenda.PecaEncomendas ?? new List<PecaEncomenda>())
                             {
-                                <li>@pe.Peca?.Nome - Quantidade: @pe.Quantidade</li>
+                                <li>@pe.Nome - Tipo: @pe.Tipo - Preço: €@pe.Preco.ToString("F2") - Quantidade: @pe.Quantidade</li>
                             }
                         </ul>
                     </div>
@@ -82,11 +109,36 @@
         </div>
         <div class="modal-backdrop fade show"></div>
     }
+
+    <!-- Stock Error Modal -->
+    @if (showStockErrorModal)
+    {
+        <div class="modal show d-block" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-danger">Erro de Stock</h5>
+                        <button type="button" class="btn-close" @onclick="() => showStockErrorModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>@stockErrorMessage</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @onclick="() => showStockErrorModal = false">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
 </div>
 
 @code {
     private List<Encomenda>? encomendas;
     private Encomenda? selectedEncomenda;
+
+    private bool showStockErrorModal = false;
+    private string stockErrorMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -119,6 +171,111 @@
         if (encomenda != null && encomenda.Estado != "Cancelada")
         {
             encomenda.Estado = "Cancelada";
+            await Context.SaveChangesAsync();
+            encomendas = await Context.Encomendas
+                .Include(e => e.Utilizador)
+                .Include(e => e.QuebraCabecaEncomendas).ThenInclude(qce => qce.QuebraCabeca)
+                .Include(e => e.PecaEncomendas).ThenInclude(pe => pe.Peca)
+                .OrderByDescending(e => e.DataEncomenda)
+                .ToListAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateOrderState(int encomendaId, string? estado)
+    {
+        var encomenda = await Context.Encomendas
+            .Include(e => e.QuebraCabecaEncomendas).ThenInclude(qce => qce.QuebraCabeca)
+            .Include(e => e.PecaEncomendas).ThenInclude(pe => pe.Peca)
+            .FirstOrDefaultAsync(e => e.Id == encomendaId);
+
+        if (encomenda != null && estado != null)
+        {
+            if (estado == "Enviada" && encomenda.Estado != "Enviada")
+            {
+                bool allAvailable = true;
+
+                // check QuebraCabeca stock
+                foreach (var qce in encomenda.QuebraCabecaEncomendas)
+                {
+                    if (qce.QuebraCabeca != null)
+                    {
+                        var quebraCabeca = await Context.QuebraCabecas
+                            .FirstOrDefaultAsync(q => q.Id == qce.QuebraCabeca.Id);
+
+                        // check if quebra-cabeça exists and has enough stock
+                        int available = quebraCabeca?.Quantidade ?? 0;
+                        if (available < qce.Quantidade)
+                        {
+                            allAvailable = false;
+                            break;
+                        }
+                    }
+                }
+
+                // check Peca stock
+                if (allAvailable)
+                {
+                    foreach (var pe in encomenda.PecaEncomendas)
+                    {
+                        if (pe.Peca != null)
+                        {
+                            var peca = await Context.Pecas
+                                .FirstOrDefaultAsync(p => p.Id == pe.Peca.Id);
+
+                            // check if peça exists and has enough stock
+                            int available = peca?.Quantidade ?? 0;
+                            if (available < pe.Quantidade)
+                            {
+                                allAvailable = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // if any item is not available, show error
+                if (!allAvailable)
+                {
+                    stockErrorMessage = "Não existe stock suficiente para enviar esta encomenda.";
+                    showStockErrorModal = true;
+                    StateHasChanged();
+                    return;
+                }
+
+                // remove QuebraCabeca stock
+                foreach (var qce in encomenda.QuebraCabecaEncomendas)
+                {
+                    if (qce.QuebraCabeca != null)
+                    {
+                        // get quebra-cabeças by name and reduce stock
+                        var quebraCabecas = await Context.QuebraCabecas
+                            .Where(q => q.Nome == qce.QuebraCabeca.Nome)
+                            .Take(qce.Quantidade)
+                            .ToListAsync();
+
+                        quebraCabecas.ForEach(q => q.Quantidade = Math.Max(0, q.Quantidade - qce.Quantidade));
+                        Context.QuebraCabecas.UpdateRange(quebraCabecas);
+                    }
+                }
+                // remove Peca stock
+                foreach (var pe in encomenda.PecaEncomendas)
+                {
+                    if (pe.Peca != null)
+                    {   
+                        // get peças by name and reduce stock
+                        var pecas = await Context.Pecas
+                            .Where(p => p.Nome == pe.Peca.Nome)
+                            .Take(pe.Quantidade)
+                            .ToListAsync();
+                        pecas.ForEach(p => p.Quantidade = Math.Max(0, p.Quantidade - pe.Quantidade));
+                        Context.Pecas.UpdateRange(pecas);
+                    }
+                }
+            }
+
+            // update the order state
+            encomenda.Estado = estado;
             await Context.SaveChangesAsync();
             encomendas = await Context.Encomendas
                 .Include(e => e.Utilizador)

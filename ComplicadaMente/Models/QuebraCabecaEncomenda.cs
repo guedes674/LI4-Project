@@ -64,5 +64,9 @@ namespace ComplicadaMente.Models
         public QuebraCabeca? QuebraCabeca { get; set; }
 
         public int Quantidade { get; set; }
+
+        public string? Nome { get; set; }
+        public string? Tipo { get; set; }
+        public decimal Preco { get; set; }
     }
 }

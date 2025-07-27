@@ -3,21 +3,22 @@
 @using Microsoft.EntityFrameworkCore
 @inject ComplicadaMenteContext Context
 @inject IJSRuntime JSRuntime
+@inject CartService Cart
 
 <PageTitle>Mais Vendidos - ComplicadaMente</PageTitle>
 
 <div class="container mt-4">
     <div class="row">
         <div class="col-12">
-            <h1 class="text-center mb-4">Puzzles Mais Vendidos</h1>
-            <p class="text-center text-muted mb-5">Descubra os puzzles favoritos dos nossos clientes</p>
+            <h1 class="text-center mb-4">Produtos Mais Vendidos</h1>
+            <p class="text-center text-muted mb-5">Descubra os favoritos dos nossos clientes</p>
         </div>
     </div>
 
     <div class="row">
-        @if (popularPuzzles?.Any() == true)
+        @if (popularProducts?.Any() == true)
         {
-            @foreach (var item in popularPuzzles.Select((puzzle, index) => new { puzzle, index }))
+            @foreach (var item in popularProducts.Select((product, index) => new { product, index }))
             {
                 <div class="col-md-6 col-lg-4 mb-4">
                     <div class="card h-100 shadow-sm popular-card @(item.index < 3 ? "top-seller" : "")">
@@ -29,35 +30,65 @@
                                 </span>
                             </div>
                         }
-                        
+
                         <div class="card-img-container">
-                            @if (item.puzzle.Imagem != null && item.puzzle.Imagem.Length > 0)
+                            @if (item.product is QuebraCabeca puzzle)
                             {
-                                <img src="data:image/jpeg;base64,@Convert.ToBase64String(item.puzzle.Imagem)" 
-                                     class="card-img-top" alt="@item.puzzle.Nome" />
+                                @if (puzzle.Imagem != null && puzzle.Imagem.Length > 0)
+                                {
+                                    <img src="data:image/jpeg;base64,@Convert.ToBase64String(puzzle.Imagem)" 
+                                         class="card-img-top" alt="@puzzle.Nome" />
+                                    <span>Stock: @puzzle.Quantidade</span>
+                                }
+                                else
+                                {
+                                    <div class="card-img-placeholder">
+                                        <i class="fas fa-puzzle-piece fa-3x text-muted"></i>
+                                    </div>
+                                    <span>Stock: @puzzle.Quantidade</span>
+                                }
                             }
-                            else
+                            else if (item.product is Peca peca)
                             {
-                                <div class="card-img-placeholder">
-                                    <i class="fas fa-puzzle-piece fa-3x text-muted"></i>
-                                </div>
+                                @if (peca.Imagem != null && peca.Imagem.Length > 0)
+                                {
+                                    <img src="data:image/jpeg;base64,@Convert.ToBase64String(peca.Imagem)" 
+                                         class="card-img-top" alt="@peca.Nome" />
+                                    <span>Stock: @peca.Quantidade</span>
+                                }
+                                else
+                                {
+                                    <div class="card-img-placeholder">
+                                        <i class="fas fa-puzzle-piece fa-3x text-muted"></i>
+                                    </div>
+                                    <span>Stock: @peca.Quantidade</span>
+                                }
                             }
                         </div>
-                        
+
                         <div class="card-body d-flex flex-column">
-                            <h5 class="card-title">@item.puzzle.Nome</h5>
-                            <p class="card-text text-muted">@item.puzzle.Tipo</p>
-                            <p class="card-text flex-grow-1">@item.puzzle.Descricao</p>
-                            
+                            <h5 class="card-title">
+                                @(item.product is QuebraCabeca qb1 ? qb1.Nome : (item.product as Peca)?.Nome)
+                            </h5>
+                            <p class="card-text text-muted">
+                                @(item.product is QuebraCabeca qb2 ? qb2.Tipo : (item.product as Peca)?.Tipo)
+                            </p>
+                            <p class="card-text flex-grow-1">
+                                @(item.product is QuebraCabeca qb3 ? qb3.Descricao : (item.product as Peca)?.Descricao)
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="h5 mb-0 text-primary">
+                                    €@(item.product is QuebraCabeca qb4 ? qb4.Preco.ToString("F2") : (item.product as Peca)?.Preco.ToString("F2"))
+                                </span>
+                                <span class="text-success">
+                                    <i class="fas fa-shopping-bag"></i>
+                                    @GetSalesCount(item.product)
+                                    vendidos
+                                </span>
+                            </div>
                             <div class="mt-auto">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="h5 mb-0 text-primary">€@item.puzzle.Preco.ToString("F2")</span>
-                                    <span class="text-success">
-                                        <i class="fas fa-shopping-bag"></i> 
-                                        @GetSalesCount(item.puzzle.Id) vendidos
-                                    </span>
-                                </div>
-                                <button class="btn btn-primary w-100" @onclick="(() => AddToCart(item.puzzle.Id))">
+                                <button class="btn btn-primary w-100"
+                                        @onclick="(() => AddToCart(item.product))">
                                     <i class="fas fa-shopping-cart"></i> Adicionar ao Carrinho
                                 </button>
                             </div>
@@ -75,7 +106,7 @@
                         <div class="spinner-border" role="status">
                             <span class="visually-hidden">Carregando...</span>
                         </div>
-                        <p class="mt-2">Carregando puzzles mais vendidos...</p>
+                        <p class="mt-2">Carregando produtos mais vendidos...</p>
                     }
                     else
                     {
@@ -87,48 +118,62 @@
     </div>
 </div>
 
+<!-- Stock Error Modal -->
+@if (showStockErrorModal)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">Erro de Stock</h5>
+                    <button type="button" class="btn-close" @onclick="() => showStockErrorModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>@stockErrorMessage</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showStockErrorModal = false">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 <style>
     .popular-card {
         position: relative;
         transition: transform 0.3s ease;
     }
-    
     .popular-card:hover {
         transform: translateY(-8px);
     }
-    
     .top-seller {
         border: 2px solid gold;
         box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3) !important;
     }
-    
     .badge-container {
         position: relative;
         z-index: 10;
     }
-    
     .bg-gold {
         background-color: gold !important;
         color: black !important;
         font-weight: bold;
     }
-    
     .card-img-container {
         height: 220px;
         overflow: hidden;
     }
-    
     .card-img-top {
         width: 100%;
         height: 100%;
         object-fit: cover;
         transition: transform 0.3s ease;
     }
-    
     .popular-card:hover .card-img-top {
         transform: scale(1.05);
     }
-    
     .card-img-placeholder {
         height: 100%;
         display: flex;
@@ -139,59 +184,80 @@
 </style>
 
 @code {
-    private List<QuebraCabeca>? popularPuzzles;
-    private Dictionary<int, int> salesData = new();
+    private List<object>? popularProducts;
+    private Dictionary<int, int> quebraCabecaSales = new();
+    private Dictionary<int, int> pecaSales = new();
     private bool isLoading = true;
+    private bool showStockErrorModal = false;
+    private string stockErrorMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadPopularPuzzles();
+        await LoadPopularProducts();
     }
 
-    private async Task LoadPopularPuzzles()
+    private async Task LoadPopularProducts()
     {
         try
         {
             isLoading = true;
-            
-            // get sales data grouped by quebra-cabeça id
-            var salesQuery = await Context.QuebraCabecaEncomendas
+
+            // get sales data for QuebraCabeca
+            var quebraCabecaSalesQuery = await Context.QuebraCabecaEncomendas
                 .GroupBy(qe => qe.QuebraCabecaId)
-                .Select(g => new { PuzzleId = g.Key, TotalSold = g.Sum(x => x.Quantidade) })
+                .Select(g => new { Id = g.Key, TotalSold = g.Sum(x => x.Quantidade) })
                 .OrderByDescending(x => x.TotalSold)
                 .ToListAsync();
 
-            // convert to dictionary for easy access
-            salesData = salesQuery.ToDictionary(x => x.PuzzleId, x => x.TotalSold);
+            quebraCabecaSales = quebraCabecaSalesQuery.ToDictionary(x => x.Id, x => x.TotalSold);
 
-            // get quebra-cabeças based on sales data
-            var puzzleIds = salesQuery.Select(s => s.PuzzleId).ToList();
-            
-            // if there are no sales, get random puzzles
-            if (puzzleIds.Any())
+            // get sales data for Peca
+            var pecaSalesQuery = await Context.PecaEncomendas
+                .GroupBy(pe => pe.PecaId)
+                .Select(g => new { Id = g.Key, TotalSold = g.Sum(x => x.Quantidade) })
+                .OrderByDescending(x => x.TotalSold)
+                .ToListAsync();
+
+            pecaSales = pecaSalesQuery.ToDictionary(x => x.Id, x => x.TotalSold);
+
+            // get top 6 QuebraCabeca and Peca based on sales
+            var topQuebraCabecaIds = quebraCabecaSalesQuery.Select(x => x.Id).Take(6).ToList();
+            var topPecaIds = pecaSalesQuery.Select(x => x.Id).Take(6).ToList();
+
+            var topQuebraCabecas = await Context.QuebraCabecas
+                .Where(q => topQuebraCabecaIds.Contains(q.Id))
+                .ToListAsync();
+
+            var topPecas = await Context.Pecas
+                .Where(p => topPecaIds.Contains(p.Id))
+                .ToListAsync();
+
+            var products = new List<object>();
+            products.AddRange(topQuebraCabecas);
+            products.AddRange(topPecas);
+
+            // order products by sales
+            popularProducts = products
+                .OrderByDescending(p =>
+                    p is QuebraCabeca qc && quebraCabecaSales.ContainsKey(qc.Id) ? quebraCabecaSales[qc.Id] :
+                    p is Peca pe && pecaSales.ContainsKey(pe.Id) ? pecaSales[pe.Id] : 0)
+                .Take(12)
+                .ToList();
+
+            // if no popular products found, load random products
+            if (popularProducts.Count == 0)
             {
-                popularPuzzles = await Context.QuebraCabecas
-                    .Where(p => puzzleIds.Contains(p.Id))
-                    .ToListAsync();
-                    
-                // order by sales count
-                popularPuzzles = popularPuzzles
-                    .OrderByDescending(p => salesData.ContainsKey(p.Id) ? salesData[p.Id] : 0)
-                    .Take(12)
-                    .ToList();
-            }
-            else
-            {
-                // if no sales, get random puzzles
-                popularPuzzles = await Context.QuebraCabecas
-                    .Take(8)
-                    .ToListAsync();
+                var randomQuebraCabecas = await Context.QuebraCabecas.Take(4).ToListAsync();
+                var randomPecas = await Context.Pecas.Take(4).ToListAsync();
+                popularProducts = new List<object>();
+                popularProducts.AddRange(randomQuebraCabecas);
+                popularProducts.AddRange(randomPecas);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading popular puzzles: {ex.Message}");
-            popularPuzzles = new List<QuebraCabeca>();
+            Console.WriteLine($"Error loading popular products: {ex.Message}");
+            popularProducts = new List<object>();
         }
         finally
         {
@@ -200,13 +266,67 @@
         }
     }
 
-    private int GetSalesCount(int puzzleId)
+    private int GetSalesCount(object product)
     {
-        return salesData.ContainsKey(puzzleId) ? salesData[puzzleId] : 0;
+        if (product is QuebraCabeca qc && quebraCabecaSales.ContainsKey(qc.Id))
+            return quebraCabecaSales[qc.Id];
+        if (product is Peca pe && pecaSales.ContainsKey(pe.Id))
+            return pecaSales[pe.Id];
+        return 0;
     }
 
-    private async Task AddToCart(int puzzleId)
+    // method to add product to cart (the same logic that is used on Shop page)
+    private async void AddToCart(object product)
     {
-        // will implement cart logic here
+        // if product is a QuebraCabeca
+        if (product is QuebraCabeca qc)
+        {
+            var cartItem = Cart.Items.FirstOrDefault(i => i.ProductId == qc.Id && i.ProductType == "QuebraCabeca");
+            int currentInCart = cartItem?.Quantity ?? 0;
+
+            // calculate reserved quantity (this logic is used to prevent adding more than available stock)
+            int reserved = await Context.QuebraCabecaEncomendas
+                .Where(qce => qce.QuebraCabecaId == qc.Id &&
+                              (qce.Encomenda.Estado == "Pendente" || qce.Encomenda.Estado == "Em Montagem"))
+                .SumAsync(qce => qce.Quantidade);
+
+            int available = qc.Quantidade - reserved;
+
+            // check if the available stock minus current items in cart is less than 1
+            if (available - currentInCart < 1)
+            {
+                stockErrorMessage = "Já adicionou o máximo disponível deste produto ao carrinho ou excedeu o stock!";
+                showStockErrorModal = true;
+                StateHasChanged();
+                return;
+            }
+            // add item to cart
+            Cart.AddItem(qc.Id, "QuebraCabeca", qc.Nome, qc.Preco, 1);
+        }
+        // if product is a Peca
+        else if (product is Peca pe)
+        {
+            var cartItem = Cart.Items.FirstOrDefault(i => i.ProductId == pe.Id && i.ProductType == "Peca");
+            int currentInCart = cartItem?.Quantity ?? 0;
+
+            // calculate reserved quantity (this logic is used to prevent adding more than available stock)
+            int reserved = await Context.PecaEncomendas
+                .Where(peEnc => peEnc.PecaId == pe.Id &&
+                                (peEnc.Encomenda.Estado == "Pendente" || peEnc.Encomenda.Estado == "Em Montagem"))
+                .SumAsync(peEnc => peEnc.Quantidade);
+
+            int available = pe.Quantidade - reserved;
+
+            // check if the available stock minus current items in cart is less than 1
+            if (available - currentInCart < 1)
+            {
+                stockErrorMessage = "Já adicionou o máximo disponível deste produto ao carrinho ou excedeu o stock!";
+                showStockErrorModal = true;
+                StateHasChanged();
+                return;
+            }
+            // add item to cart
+            Cart.AddItem(pe.Id, "Peca", pe.Nome, pe.Preco, 1);
+        }
     }
 }

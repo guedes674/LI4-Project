@@ -3,6 +3,7 @@ using System;
 using ComplicadaMente.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ComplicadaMente.Migrations
 {
     [DbContext(typeof(ComplicadaMenteContext))]
-    partial class ComplicadaMenteContextModelSnapshot : ModelSnapshot
+    [Migration("20250727161708_AddManualStep")]
+    partial class AddManualStep
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.7");
@@ -87,18 +90,14 @@ namespace ComplicadaMente.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Descricao")
+                    b.Property<string>("Description")
                         .IsRequired()
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<byte[]>("Imagem")
+                    b.Property<byte[]>("Image")
                         .IsRequired()
                         .HasColumnType("BLOB");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
 
                     b.Property<int>("QuebraCabecaId")
                         .HasColumnType("INTEGER");
@@ -110,7 +109,7 @@ namespace ComplicadaMente.Migrations
 
                     b.HasIndex("QuebraCabecaId");
 
-                    b.ToTable("ManualSteps");
+                    b.ToTable("ManualStep");
                 });
 
             modelBuilder.Entity("ComplicadaMente.Models.Peca", b =>
@@ -135,9 +134,6 @@ namespace ComplicadaMente.Migrations
 
                     b.Property<decimal>("Preco")
                         .HasColumnType("decimal(9, 2)");
-
-                    b.Property<int>("Quantidade")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("QuebraCabecaId")
                         .HasColumnType("INTEGER")
@@ -206,9 +202,6 @@ namespace ComplicadaMente.Migrations
 
                     b.Property<decimal>("Preco")
                         .HasColumnType("decimal(9, 2)");
-
-                    b.Property<int>("Quantidade")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Tipo")
                         .IsRequired()

@@ -1,0 +1,154 @@
+@page "/admin/manuals"
+@layout MainLayout
+@using ComplicadaMente.Models
+@using Microsoft.EntityFrameworkCore
+@inject ComplicadaMenteContext Context
+
+<PageTitle>Manuais de Montagem</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Manuais de Montagem</h1>
+    <div class="row">
+        @if (quebraCabecas == null)
+        {
+            <div>Carregando...</div>
+        }
+        else
+        {
+            @foreach (var puzzle in quebraCabecas)
+            {
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        @if (puzzle.Imagem != null && puzzle.Imagem.Length > 0)
+                        {
+                            <img src="data:image/jpeg;base64,@Convert.ToBase64String(puzzle.Imagem)" class="card-img-top" alt="@puzzle.Nome" />
+                        }
+                        <div class="card-body">
+                            <h5 class="card-title">@puzzle.Nome</h5>
+                            <p class="card-text">@puzzle.Descricao</p>
+                            <a class="btn btn-primary" @onclick="() => OpenManual(puzzle.Id)">Ver Manual</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@if (selectedManualSteps != null && selectedManualSteps.Count > 0)
+{
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content manual-modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Manual de Montagem</h5>
+                    <button type="button" class="btn-close" @onclick="CloseManual"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button class="manual-arrow-btn"
+                                @onclick="ShowPreviousStep"
+                                disabled="@(currentStepIndex == 0)">
+                            <i class="fas fa-arrow-left">⬅️</i>
+                        </button>
+                        <div class="flex-grow-1 px-4 manual-step-content">
+                            @{
+                                var step = selectedManualSteps.OrderBy(s => s.StepNumber).ElementAt(currentStepIndex);
+                            }
+                            <h6>Passo @step.StepNumber</h6>
+                            <p>@step.Descricao</p>
+                            @if (step.Imagem != null)
+                            {
+                                <img src="data:image/jpeg;base64,@Convert.ToBase64String(step.Imagem)" class="img-fluid mb-2" style="max-height:300px;" />
+                            }
+                        </div>
+                        <button class="manual-arrow-btn"
+                                @onclick="ShowNextStep"
+                                disabled="@(currentStepIndex == selectedManualSteps.Count - 1)">
+                            <i class="fas fa-arrow-right">➡️</i>
+                        </button>
+                    </div>
+                    <div class="mt-2 text-muted" style="font-size:0.95em;">
+                        Passo @(currentStepIndex + 1) de @selectedManualSteps.Count
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<QuebraCabeca>? quebraCabecas;
+    private List<ManualStep>? selectedManualSteps;
+    private int currentStepIndex = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        quebraCabecas = await Context.QuebraCabecas.ToListAsync();
+    }
+
+    private async Task OpenManual(int quebraCabecaId)
+    {
+        selectedManualSteps = await Context.ManualSteps
+            .Where(m => m.QuebraCabecaId == quebraCabecaId)
+            .OrderBy(m => m.StepNumber)
+            .ToListAsync();
+        currentStepIndex = 0;
+        StateHasChanged();
+    }
+
+    private void CloseManual()
+    {
+        selectedManualSteps = null;
+        currentStepIndex = 0;
+    }
+
+    private void ShowPreviousStep()
+    {
+        if (currentStepIndex > 0)
+            currentStepIndex--;
+    }
+
+    private void ShowNextStep()
+    {
+        if (selectedManualSteps != null && currentStepIndex < selectedManualSteps.Count - 1)
+            currentStepIndex++;
+    }
+}
+
+<style>
+    .manual-modal-content {
+        min-height: 420px;
+        max-width: 700px;
+        width: 700px;
+    }
+    .manual-step-content {
+        min-height: 260px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .manual-arrow-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        background: #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #007acc;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: background 0.2s, color 0.2s;
+    }
+    .manual-arrow-btn:disabled {
+        background: #e0e0e0;
+        color: #b0b0b0;
+        cursor: not-allowed;
+    }
+    .manual-arrow-btn:not(:disabled):hover {
+        background: #007acc;
+        color: #fff;
+    }
+</style>
