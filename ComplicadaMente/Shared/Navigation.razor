@@ -1,11 +1,12 @@
 @using Microsoft.EntityFrameworkCore
 @inject ComplicadaMenteContext Context
 @inject IJSRuntime JSRuntime
+@inject CartService Cart
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
     <div class="container">
-        <a class="navbar-brand fw-bold text-primary" href="/">ComplicadaMente</a>
-        
+        <span class="navbar-brand fw-bold text-primary">ComplicadaMente</span>
+
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -39,19 +40,30 @@
                 }
             </ul>
             
-            @if (!string.IsNullOrEmpty(UserName))
-            {
-                <div class="navbar-nav">
+            <div class="navbar-nav">
+                @if (!string.IsNullOrEmpty(UserName))
+                {
+                    @* Show cart icon only for clients *@
+                    @if (!IsAdmin)
+                    {
+                        <a class="nav-link position-relative me-2" href="/cart" title="Carrinho">
+                            <i class="fas fa-shopping-cart">🛒</i>
+                            @if (Cart.Items.Count > 0)
+                            {
+                                <span class="badge bg-danger position-absolute top-0 start-100 translate-middle">
+                                    @Cart.Items.Sum(i => i.Quantity)
+                                </span>
+                            }
+                        </a>
+                    }
                     <span class="navbar-text me-3">Olá, @UserName!</span>
                     <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Sair</button>
-                </div>
-            }
-            else
-            {
-                <div class="navbar-nav">
+                }
+                else
+                {
                     <a class="nav-link" href="/login">Login</a>
-                </div>
-            }
+                }
+            </div>
         </div>
     </div>
 </nav>
@@ -61,11 +73,26 @@
     [Parameter] public string? UserName { get; set; }
     [Parameter] public EventCallback OnLogout { get; set; }
 
+    protected override void OnInitialized()
+    {
+        Cart.OnChange += CartChanged;
+    }
+
+    private void CartChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
     private async Task Logout()
     {
         if (OnLogout.HasDelegate)
         {
             await OnLogout.InvokeAsync();
         }
+    }
+
+    public void Dispose()
+    {
+        Cart.OnChange -= CartChanged;
     }
 }

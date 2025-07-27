@@ -111,17 +111,10 @@ namespace ComplicadaMente.Models
         public Utilizador? Utilizador { get; set; }
 
         [Required]
-        [Column("ID_Funcionario")]
-        public int FuncionarioId { get; set; }
-
-        [ForeignKey("FuncionarioId")]
-        public Funcionario? Funcionario { get; set; }
-
-        [Required]
         [Column("Data_Encomenda")]
         public DateOnly DataEncomenda { get; set; }
 
-        public ICollection<QuebraCabecaEncomenda>? QuebraCabecaEncomendas { get; set; }
-        public ICollection<PecaEncomenda>? PecaEncomendas { get; set; }
+        public ICollection<PecaEncomenda> PecaEncomendas { get; set; } = new List<PecaEncomenda>();
+        public ICollection<QuebraCabecaEncomenda> QuebraCabecaEncomendas { get; set; } = new List<QuebraCabecaEncomenda>();
     }
 }

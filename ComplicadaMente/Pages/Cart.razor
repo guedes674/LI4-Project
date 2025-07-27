@@ -1,0 +1,200 @@
+@page "/cart"
+@layout MainLayout
+@inject CartService CartService
+@inject NavigationManager Navigation
+
+@inject ComplicadaMente.Data.ComplicadaMenteContext DbContext
+@inject AuthenticationStateProvider AuthProvider
+@inject ComplicadaMente.Services.UserStateService UserState
+
+<PageTitle>Carrinho - ComplicadaMente</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4 text-center">Carrinho de Compras</h1>
+
+    @if (CartService.Items.Count == 0)
+    {
+        <div class="alert alert-info text-center">
+            O seu carrinho está vazio.
+            <br />
+            <a href="/shop" class="btn btn-primary mt-3">Voltar à Loja</a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Tipo</th>
+                        <th>Preço</th>
+                        <th>Quantidade</th>
+                        <th>Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in CartService.Items)
+                    {
+                        <tr>
+                            <td>@item.Name</td>
+                            <td>@item.ProductType</td>
+                            <td>€@item.Price.ToString("F2")</td>
+                            <td>
+                                <input type="number" min="1" class="form-control form-control-sm"
+                                       style="width: 80px;"
+                                       value="@item.Quantity"
+                                       @onchange="(e) => UpdateQuantity(item, e)" />
+                            </td>
+                            <td>€@(item.Price * item.Quantity)</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" @onclick="() => RemoveItem(item)">
+                                    <i class="fas fa-trash">🗑️</i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold">Total:</td>
+                        <td colspan="2" class="fw-bold text-primary">€@CartService.Items.Sum(i => i.Price * i.Quantity).ToString("F2")</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="d-flex justify-content-between mt-4">
+            <a href="/shop" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Continuar Comprando
+            </a>
+            <button class="btn btn-success" @onclick="ShowCheckoutModal">
+                <i class="fas fa-credit-card"></i> Finalizar Compra
+            </button>
+        </div>
+
+        @if (showCheckoutModal)
+        {
+            <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirmar Encomenda</h5>
+                            <button type="button" class="btn-close" @onclick="HideCheckoutModal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Tem a certeza que deseja finalizar a compra?</p>
+                            <p><strong>Total:</strong> €@CartService.Items.Sum(i => i.Price * i.Quantity).ToString("F2")</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" @onclick="HideCheckoutModal">Cancelar</button>
+                            <button class="btn btn-success" @onclick="ConfirmCheckout">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+@code {
+    private bool showCheckoutModal = false;
+
+    private void UpdateQuantity(CartService.CartItem item, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newQty) && newQty > 0)
+        {
+            CartService.UpdateQuantity(item.ProductId, item.ProductType, newQty);
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveItem(CartService.CartItem item)
+    {
+        CartService.RemoveItem(item.ProductId, item.ProductType);
+        StateHasChanged();
+    }
+
+    private void ShowCheckoutModal()
+    {
+        showCheckoutModal = true;
+    }
+
+    private void HideCheckoutModal()
+    {
+        showCheckoutModal = false;
+    }
+
+    private async void ConfirmCheckout()
+    {
+        // get the user email from the authentication state
+        var userEmail = UserState.UserEmail;
+
+        // check if the user is authenticated
+        if (string.IsNullOrEmpty(userEmail))
+        {
+            return;
+        }
+
+        // search for the user in the database
+        var utilizador = DbContext.Utilizadores.FirstOrDefault(u => u.Email == userEmail);
+
+        // if the user is not found
+        if (utilizador == null)
+        {
+            return;
+        }
+
+        // create the order
+        var encomenda = new ComplicadaMente.Models.Encomenda
+        {
+            Estado = "Pendente",
+            PrecoTotal = CartService.Items.Sum(i => i.Price * i.Quantity),
+            UtilizadorId = utilizador.Id,
+            DataEncomenda = DateOnly.FromDateTime(DateTime.Now),
+            QuebraCabecaEncomendas = new List<ComplicadaMente.Models.QuebraCabecaEncomenda>(),
+            PecaEncomendas = new List<ComplicadaMente.Models.PecaEncomenda>()
+        };
+
+        DbContext.Encomendas.Add(encomenda);
+        await DbContext.SaveChangesAsync();
+
+        foreach (var item in CartService.Items)
+        {   
+            // if the item is a QuebraCabeca
+            if (item.ProductType == "QuebraCabeca")
+            {
+                var quebraCabeca = DbContext.QuebraCabecas.FirstOrDefault(q => q.Id == item.ProductId);
+                if (quebraCabeca != null)
+                {
+                    var qce = new QuebraCabecaEncomenda
+                    {
+                        QuebraCabecaId = quebraCabeca.Id,
+                        EncomendaId = encomenda.Id,
+                        Quantidade = item.Quantity
+                    };
+                    DbContext.QuebraCabecaEncomendas.Add(qce);
+                }
+            }
+            // if the item is a Peca
+            else if (item.ProductType == "Peca")
+            {
+                var peca = DbContext.Pecas.FirstOrDefault(p => p.Id == item.ProductId);
+                if (peca != null)
+                {
+                    var pecaEncomenda = new PecaEncomenda
+                    {
+                        PecaId = peca.Id,
+                        EncomendaId = encomenda.Id,
+                        Quantidade = item.Quantity
+                    };
+                    DbContext.PecaEncomendas.Add(pecaEncomenda);
+                }
+            }
+        }
+        // save the order
+        await DbContext.SaveChangesAsync();
+        CartService.Clear();
+        showCheckoutModal = false;
+        Navigation.NavigateTo("/shop");
+    }
+}

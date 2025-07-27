@@ -1,0 +1,132 @@
+@page "/admin/orders"
+@layout MainLayout
+@using ComplicadaMente.Models
+@using Microsoft.EntityFrameworkCore
+@inject ComplicadaMenteContext Context
+
+<PageTitle>Encomendas - ComplicadaMente</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Encomendas Processadas</h1>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Estado</th>
+                <th>Preço Total</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (encomendas != null)
+            {
+                @foreach (var enc in encomendas)
+                {
+                    <tr>
+                        <td>@enc.Id</td>
+                        <td>@enc.Utilizador?.Nome</td>
+                        <td>@enc.DataEncomenda.ToString("dd/MM/yyyy")</td>
+                        <td>@enc.Estado</td>
+                        <td>€@enc.PrecoTotal.ToString("F2")</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" @onclick="() => ShowDetails(enc.Id)">Detalhes</button>
+                            @if (enc.Estado != "Cancelada")
+                            {
+                                <button class="btn btn-sm btn-danger ms-2" @onclick="() => CancelOrder(enc.Id)">Cancelar</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    @if (selectedEncomenda != null)
+    {
+        <div class="modal show d-block" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Detalhes da Encomenda #@selectedEncomenda.Id</h5>
+                        <button type="button" class="btn-close" @onclick="CloseDetails"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Cliente:</strong> @selectedEncomenda.Utilizador?.Nome</p>
+                        <p><strong>Data:</strong> @selectedEncomenda.DataEncomenda.ToString("dd/MM/yyyy")</p>
+                        <p><strong>Estado:</strong> @selectedEncomenda.Estado</p>
+                        <p><strong>Preço Total:</strong> €@selectedEncomenda.PrecoTotal.ToString("F2")</p>
+                        <hr />
+                        <h6>Puzzles</h6>
+                        <ul>
+                            @foreach (var qce in selectedEncomenda.QuebraCabecaEncomendas ?? new List<QuebraCabecaEncomenda>())
+                            {
+                                <li>@qce.QuebraCabeca?.Id - Quantidade: @qce.Quantidade</li>
+                            }
+                        </ul>
+                        <h6>Peças</h6>
+                        <ul>
+                            @foreach (var pe in selectedEncomenda.PecaEncomendas ?? new List<PecaEncomenda>())
+                            {
+                                <li>@pe.Peca?.Nome - Quantidade: @pe.Quantidade</li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @onclick="CloseDetails">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
+</div>
+
+@code {
+    private List<Encomenda>? encomendas;
+    private Encomenda? selectedEncomenda;
+
+    protected override async Task OnInitializedAsync()
+    {
+        encomendas = await Context.Encomendas
+            .Include(e => e.Utilizador)
+            .Include(e => e.QuebraCabecaEncomendas).ThenInclude(qce => qce.QuebraCabeca)
+            .Include(e => e.PecaEncomendas).ThenInclude(pe => pe.Peca)
+            .OrderByDescending(e => e.DataEncomenda)
+            .ToListAsync();
+    }
+
+    private async Task ShowDetails(int encomendaId)
+    {
+        selectedEncomenda = await Context.Encomendas
+            .Include(e => e.Utilizador)
+            .Include(e => e.QuebraCabecaEncomendas).ThenInclude(qce => qce.QuebraCabeca)
+            .Include(e => e.PecaEncomendas).ThenInclude(pe => pe.Peca)
+            .FirstOrDefaultAsync(e => e.Id == encomendaId);
+        StateHasChanged();
+    }
+
+    private void CloseDetails()
+    {
+        selectedEncomenda = null;
+    }
+
+    private async Task CancelOrder(int encomendaId)
+    {
+        var encomenda = await Context.Encomendas.FirstOrDefaultAsync(e => e.Id == encomendaId);
+        if (encomenda != null && encomenda.Estado != "Cancelada")
+        {
+            encomenda.Estado = "Cancelada";
+            await Context.SaveChangesAsync();
+            encomendas = await Context.Encomendas
+                .Include(e => e.Utilizador)
+                .Include(e => e.QuebraCabecaEncomendas).ThenInclude(qce => qce.QuebraCabeca)
+                .Include(e => e.PecaEncomendas).ThenInclude(pe => pe.Peca)
+                .OrderByDescending(e => e.DataEncomenda)
+                .ToListAsync();
+            StateHasChanged();
+        }
+    }
+}

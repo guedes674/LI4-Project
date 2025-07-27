@@ -3,6 +3,7 @@ using System;
 using ComplicadaMente.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ComplicadaMente.Migrations
 {
     [DbContext(typeof(ComplicadaMenteContext))]
-    partial class ComplicadaMenteContextModelSnapshot : ModelSnapshot
+    [Migration("20250726180916_MakeFuncionarioIdOptional")]
+    partial class MakeFuncionarioIdOptional
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.7");

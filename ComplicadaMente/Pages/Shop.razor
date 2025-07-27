@@ -2,6 +2,7 @@
 @layout MainLayout
 @using Microsoft.EntityFrameworkCore
 @inject ComplicadaMenteContext Context
+@inject CartService Cart
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Loja - ComplicadaMente</PageTitle>
@@ -79,9 +80,10 @@
                             <div class="mt-auto">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="h5 mb-0 text-primary">€@puzzle.Preco.ToString("F2")</span>
-                                    <button class="btn btn-primary btn-sm" @onclick="(() => AddToCart(puzzle.Id))">
-                                        <i class="fas fa-shopping-cart"></i> Adicionar
-                                    </button>
+                                    <button class="btn btn-primary btn-sm"
+                                        @onclick="() => AddPuzzleToCart(puzzle)">
+                                            <i class="fas fa-shopping-cart"></i> Adicionar ao Carrinho
+                                        </button>
                                 </div>
                             </div>
                         </div>
@@ -237,8 +239,9 @@
         ApplyFilters();
     }
 
-    private async Task AddToCart(int puzzleId)
+    // function to help with adding puzzles to the cart(because of the bugs of .net)
+    private void AddPuzzleToCart(QuebraCabeca puzzle)
     {
-        // will implement cart logic here
+        Cart.AddItem(puzzle.Id, "QuebraCabeca", puzzle.Nome, puzzle.Preco, 1);
     }
 }

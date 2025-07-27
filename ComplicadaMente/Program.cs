@@ -9,6 +9,7 @@ builder.Services.AddDbContext<ComplicadaMenteContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSingleton<UserStateService>();
+builder.Services.AddScoped<CartService>();
 
 builder.Services.AddSession(options =>
 {

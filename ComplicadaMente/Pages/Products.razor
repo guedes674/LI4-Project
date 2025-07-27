@@ -1,0 +1,87 @@
+@page "/admin/products"
+@layout MainLayout
+@using ComplicadaMente.Models
+@using Microsoft.EntityFrameworkCore
+@inject ComplicadaMenteContext Context
+
+<PageTitle>Produtos - ComplicadaMente</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Produtos Disponíveis</h1>
+
+    <h3>Puzzles (Quebra-Cabeças)</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Preço</th>
+                <th>Quantidade</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (quebraCabecas != null)
+            {
+                @foreach (var puzzle in quebraCabecas)
+                {
+                    <tr>
+                        <td>@puzzle.Nome</td>
+                        <td>@puzzle.Tipo</td>
+                        <td>€@puzzle.Preco.ToString("F2")</td>
+                        <td>@(quebraCabecaNomeCounts != null && quebraCabecaNomeCounts.ContainsKey(puzzle.Nome) ? quebraCabecaNomeCounts[puzzle.Nome] : 0)</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    <h3>Peças</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Puzzle</th>
+                <th>Preço</th>
+                <th>Quantidade</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (pecas != null)
+            {
+                @foreach (var peca in pecas)
+                {
+                    <tr>
+                        <td>@peca.Nome</td>
+                        <td>@peca.Tipo</td>
+                        <td>@peca.QuebraCabeca?.Nome</td>
+                        <td>€@peca.Preco.ToString("F2")</td>
+                        <td>@(pecaNomeCounts != null && pecaNomeCounts.ContainsKey(peca.Nome) ? pecaNomeCounts[peca.Nome] : 0)</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<QuebraCabeca>? quebraCabecas;
+    private List<Peca>? pecas;
+
+    private Dictionary<string, int>? quebraCabecaNomeCounts;
+    private Dictionary<string, int>? pecaNomeCounts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        quebraCabecas = await Context.QuebraCabecas.ToListAsync();
+        pecas = await Context.Pecas.Include(p => p.QuebraCabeca).ToListAsync();
+
+        quebraCabecaNomeCounts = quebraCabecas
+            .GroupBy(q => q.Nome ?? "Desconhecido")
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        pecaNomeCounts = pecas
+            .GroupBy(p => p.Nome ?? "Desconhecido")
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+}
