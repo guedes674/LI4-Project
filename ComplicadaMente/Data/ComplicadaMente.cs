@@ -21,9 +21,16 @@ namespace ComplicadaMente.Data
         {
             modelBuilder.Entity<QuebraCabecaEncomenda>()
                 .HasKey(q => new { q.EncomendaId, q.QuebraCabecaId });
-
             modelBuilder.Entity<PecaEncomenda>()
                 .HasKey(p => new { p.EncomendaId, p.PecaId });
+
+            modelBuilder.Entity<PecaEncomenda>()
+                .Property(p => p.Preco)
+                .HasColumnType("decimal(9,2)");
+
+            modelBuilder.Entity<QuebraCabecaEncomenda>()
+                .Property(q => q.Preco)
+                .HasColumnType("decimal(9,2)");
         }
     }
 }

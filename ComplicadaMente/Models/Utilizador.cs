@@ -112,7 +112,7 @@ namespace ComplicadaMente.Models
         public string? Morada { get; set; }
 
         [Required]
-        [StringLength(45)]
+        [StringLength(100)]
         public string? Password { get; set; }
     }
 }

@@ -133,6 +133,7 @@ namespace ComplicadaMente.Models
         public string? Descricao { get; set; }
 
         [Required]
+        [Column(TypeName = "VARBINARY(MAX)")]
         public byte[]? Imagem { get; set; }
 
         [Required]

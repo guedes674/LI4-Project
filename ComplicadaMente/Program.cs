@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.SqlServer;
 using ComplicadaMente.Data;
 using ComplicadaMente.Services;
 using ComplicadaMente.Models;
@@ -6,7 +7,7 @@ using ComplicadaMente.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ComplicadaMenteContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSingleton<UserStateService>();
 builder.Services.AddScoped<CartService>();
